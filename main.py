@@ -58,7 +58,7 @@ def accuracy_op():
     return accuracy
 
 
-def pruning_params(global_step, begin_step=0, end_step=-1, pruning_freq=60,
+def pruning_params(global_step, begin_step=0, end_step=-1, pruning_freq=10,
                    sparsity_function=1e+50, target_sparsity=.50):
     """
     Creates the pruning op
@@ -71,9 +71,9 @@ def pruning_params(global_step, begin_step=0, end_step=-1, pruning_freq=60,
     :return: Pruning op
     """
     pruning_hparams = pruning.get_pruning_hparams()
-    #pruning_hparams.begin_pruning_step = begin_step
-    #pruning_hparams.end_pruning_step = end_step
-    #pruning_hparams.pruning_frequency = pruning_freq
+    pruning_hparams.begin_pruning_step = begin_step
+    pruning_hparams.end_pruning_step = end_step
+    pruning_hparams.pruning_frequency = pruning_freq
     pruning_hparams.sparsity_function_end_step = sparsity_function
     pruning_hparams.target_sparsity = target_sparsity
     p = pruning.Pruning(pruning_hparams, global_step=global_step, sparsity=target_sparsity)
@@ -82,7 +82,7 @@ def pruning_params(global_step, begin_step=0, end_step=-1, pruning_freq=60,
     return p_op
 
 
-def plot(y, x_label='Epochs', y_label='Accuracy', title='Pruned', combined=False):
+def plot(y, x_label='Epochs', y_label='Accuracy', title='Pruned', combined=False, save=False, fn='tmp'):
     """
     Plots the accuracy
     :param y: the accuracy to be plotted
@@ -99,6 +99,8 @@ def plot(y, x_label='Epochs', y_label='Accuracy', title='Pruned', combined=False
     if combined:
         plt.axvline(x=int(len(y)/2), color='r')  # plot the line half-way through the plot
     plt.plot(x, y)
+    if save:
+        plt.savefig('plots/' + fn + '.png')
     plt.show()
 
 
@@ -179,7 +181,7 @@ def main(saver, total_epochs=250, print_freq=1, model_path_unpruned="Model_Saves
                     print("Epoch: {}, accuracy: {}".format(epoch, acc_print))
 
             # Saves the model after pruning
-            saver.save(sess, model_path_pruned + "_{}".format(sparsity*100))
+            saver.save(sess, model_path_pruned + "_{}".format(int(sparsity*100)))
 
             # Print final accuracy
             acc_print_final = sess.run(accuracy, feed_dict={images: fashion_mnist.test.images,
@@ -193,8 +195,8 @@ def main(saver, total_epochs=250, print_freq=1, model_path_unpruned="Model_Saves
 if __name__ == "__main__":
     model_sparsities = [.10, .25, .50, .90]  # Target sparsity used for pruning
     train_lr = 1e-4  # Learning rate used for the optimizer
-    epochs = 500  # Epochs to train before and after pruning
-    print_every = 50  # Frequency of prints
+    epochs = 2500  # Epochs to train before and after pruning
+    print_every = 100  # Frequency of prints
     path_unpruned = "Model_Saves/Unpruned.ckpt"  # Path to save the unpruned model
     path_pruned = "Model_Saves/Pruned.ckpt"  # Path to save the pruned model
     saver = tf.train.Saver()
@@ -209,4 +211,5 @@ if __name__ == "__main__":
                           model_path_unpruned=path_unpruned, model_path_pruned=path_pruned, sparsity=model_sparsity,
                           learning_rate=train_lr)
         plot(pruned_acc, title='Fashion MNIST Pruned (Sparsity: {})'.format(model_sparsity))
-        plot(unpruned_acc + pruned_acc, title='Fashion MNIST (sparsity: {})'.format(model_sparsity), combined=True)
+        plot(unpruned_acc + pruned_acc, title='Fashion MNIST (sparsity: {})'.format(model_sparsity), combined=True,
+             save=True, fn='Fashion_MNIST_Sparsity_{}'.format(int(model_sparsity*100)))

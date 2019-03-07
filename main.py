@@ -59,7 +59,7 @@ def accuracy_op():
 
 
 def pruning_params(global_step, begin_step=0, end_step=-1, pruning_freq=10,
-                   sparsity_function=1e+50, target_sparsity=.50):
+                   sparsity_function=2000, target_sparsity=.50, sparsity_exponent=1.0):
     """
     Creates the pruning op
     :param global_step: the global step, needed for pruning
@@ -68,6 +68,7 @@ def pruning_params(global_step, begin_step=0, end_step=-1, pruning_freq=10,
     :param pruning_freq: the frequency of global step for when to prune
     :param sparsity_function: the global step used as the end point for the gradual sparsity function
     :param target_sparsity: the target sparsity
+    :param sparsity_exponent: the exponent for the sparsity function
     :return: Pruning op
     """
     pruning_hparams = pruning.get_pruning_hparams()
@@ -76,6 +77,7 @@ def pruning_params(global_step, begin_step=0, end_step=-1, pruning_freq=10,
     pruning_hparams.pruning_frequency = pruning_freq
     pruning_hparams.sparsity_function_end_step = sparsity_function
     pruning_hparams.target_sparsity = target_sparsity
+    pruning_hparams.sparsity_function_exponent = sparsity_exponent
     p = pruning.Pruning(pruning_hparams, global_step=global_step, sparsity=target_sparsity)
     p_op = p.conditional_mask_update_op()
     p.add_pruning_summaries()

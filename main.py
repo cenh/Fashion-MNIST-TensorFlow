@@ -150,9 +150,8 @@ def main(saver, total_epochs=250, print_freq=1, model_path_unpruned="models/unpr
                 if epoch % print_freq == 0:
                     print("(Pre) Epoch: {}, accuracy: {}".format(epoch, acc_print))
 
-            acc_print_pre = sess.run(accuracy, feed_dict={images: fashion_mnist.test.images,
-                                                          labels: fashion_mnist.test.labels})
-
+            # Print the accuracy
+            acc_print_pre = acc[-1]
             print("Pre-pruning accuracy: {}".format(acc_print_pre))
 
             # Save the model before pruning starts
@@ -186,8 +185,7 @@ def main(saver, total_epochs=250, print_freq=1, model_path_unpruned="models/unpr
             saver.save(sess, model_path_pruned + "_{}".format(int(sparsity*100)))
 
             # Print final accuracy
-            acc_print_final = sess.run(accuracy, feed_dict={images: fashion_mnist.test.images,
-                                                            labels: fashion_mnist.test.labels})
+            acc_print_final = acc[-1]
             print("Pre-pruning accuracy: {}, post-pruning accuracy: {}".format(acc_print_pre, acc_print_final))
             print("Final sparsity by layer, expected: {}, actually: {}"
                   .format(sparsity, sess.run(tf.contrib.model_pruning.get_weight_sparsity())))

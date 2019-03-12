@@ -106,8 +106,8 @@ def plot(y, x_label='Epochs', y_label='Accuracy', title='Pruned', combined=False
     plt.show()
 
 
-def main(saver, total_epochs=250, print_freq=1, model_path_unpruned="Model_Saves/Unpruned.ckpt",
-         model_path_pruned="Model_Saves/Pruned.ckpt", sparsity=.5, learning_rate=1e-3, train_mode=False):
+def main(saver, total_epochs=250, print_freq=1, model_path_unpruned="models/unpruned.ckpt",
+         model_path_pruned="models/pruned.ckpt", sparsity=.5, learning_rate=1e-3, train_mode=False):
     """
     The main method, creates all the different ops and starts the training.
     The model starts by training for total_epochs, this is considered the pre-training, then model prunes and trains
@@ -199,8 +199,8 @@ if __name__ == "__main__":
     train_lr = 1e-4  # Learning rate used for the optimizer
     epochs = 2500  # Epochs to train before and after pruning
     print_every = 100  # Frequency of prints
-    path_unpruned = "Model_Saves/Unpruned.ckpt"  # Path to save the unpruned model
-    path_pruned = "Model_Saves/Pruned.ckpt"  # Path to save the pruned model
+    path_unpruned = "models/unpruned.ckpt"  # Path to save the unpruned model
+    path_pruned = "models/pruned.ckpt"  # Path to save the pruned model
     saver = tf.train.Saver()
 
     unpruned_acc = main(saver, total_epochs=epochs, print_freq=print_every,

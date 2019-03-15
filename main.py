@@ -106,7 +106,7 @@ def plot(y, x_label='Epochs', y_label='Accuracy', title='Pruned', combined=False
     plt.show()
 
 
-def main(saver, total_epochs=250, print_freq=1, model_path_unpruned="models/unpruned.ckpt",
+def main(saver, data, sess, total_epochs=250, print_freq=1, model_path_unpruned="models/unpruned.ckpt",
          model_path_pruned="models/pruned.ckpt", sparsity=.5, learning_rate=1e-3, train_mode=False):
     """
     The main method, creates all the different ops and starts the training.
@@ -124,7 +124,7 @@ def main(saver, total_epochs=250, print_freq=1, model_path_unpruned="models/unpr
     acc = []
 
     # Import dataset
-    fashion_mnist = input_data.read_data_sets('data/fashion', one_hot=True)
+    fashion_mnist = data
 
     # Create global step variable (needed for pruning)
     global_step = tf.train.get_or_create_global_step()
@@ -135,79 +135,81 @@ def main(saver, total_epochs=250, print_freq=1, model_path_unpruned="models/unpr
     accuracy = accuracy_op()
     train_op = train(loss, global_step, lr=learning_rate)
     prune_op = pruning_params(global_step, target_sparsity=sparsity)
-    with tf.Session() as sess:
-        sess.run(tf.global_variables_initializer())
-        if train_mode:
-            for epoch in range(total_epochs):
-                sess.run(train_op, feed_dict={images: fashion_mnist.train.images,
-                                              labels: fashion_mnist.train.labels})
 
-                # Save the accuracy
-                acc_print = sess.run(accuracy, feed_dict={images: fashion_mnist.test.images,
-                                                          labels: fashion_mnist.test.labels})
-                acc.append(acc_print)
+    sess.run(tf.global_variables_initializer())
+    if train_mode:
+        for epoch in range(total_epochs):
+            sess.run(train_op, feed_dict={images: fashion_mnist.train.images,
+                                          labels: fashion_mnist.train.labels})
 
-                if epoch % print_freq == 0:
-                    print("(Pre) Epoch: {}, accuracy: {}".format(epoch, acc_print))
+            # Save the accuracy
+            acc_print = sess.run(accuracy, feed_dict={images: fashion_mnist.test.images,
+                                                      labels: fashion_mnist.test.labels})
+            acc.append(acc_print)
 
-            # Print the accuracy
-            acc_print_pre = acc[-1]
-            print("Pre-pruning accuracy: {}".format(acc_print_pre))
+            if epoch % print_freq == 0:
+                print("(Pre) Epoch: {}, accuracy: {}".format(epoch, acc_print))
 
-            # Save the model before pruning starts
-            saver.save(sess, model_path_unpruned)
-        else:
-            # Restore unpruned model
-            saver.restore(sess, model_path_unpruned)
+        # Print the accuracy
+        acc_print_pre = acc[-1]
+        print("Pre-pruning accuracy: {}".format(acc_print_pre))
 
-            # Reset the global step counter and begin pruning
-            sess.run(reset_global_step_op)
+        # Save the model before pruning starts
+        saver.save(sess, model_path_unpruned)
+    else:
+        # Restore unpruned model
+        saver.restore(sess, model_path_unpruned)
 
-            # Get the accuracy before pruning
-            acc_print_pre = sess.run(accuracy, feed_dict={images: fashion_mnist.test.images,
-                                                          labels: fashion_mnist.test.labels})
+        # Reset the global step counter and begin pruning
+        sess.run(reset_global_step_op)
 
-            # Prune and train the model
-            for epoch in range(total_epochs):
-                sess.run(train_op, feed_dict={images: fashion_mnist.train.images,
-                                              labels: fashion_mnist.train.labels})
-                sess.run(prune_op)
+        # Get the accuracy before pruning
+        acc_print_pre = sess.run(accuracy, feed_dict={images: fashion_mnist.test.images,
+                                                      labels: fashion_mnist.test.labels})
 
-                # Save the accuracy
-                acc_print = sess.run(accuracy, feed_dict={images: fashion_mnist.test.images,
-                                                          labels: fashion_mnist.test.labels})
-                acc.append(acc_print)
+        # Prune and train the model
+        for epoch in range(total_epochs):
+            sess.run(train_op, feed_dict={images: fashion_mnist.train.images,
+                                          labels: fashion_mnist.train.labels})
+            sess.run(prune_op)
 
-                if epoch % print_freq == 0:
-                    print("Epoch: {}, accuracy: {}".format(epoch, acc_print))
+            # Save the accuracy
+            acc_print = sess.run(accuracy, feed_dict={images: fashion_mnist.test.images,
+                                                      labels: fashion_mnist.test.labels})
+            acc.append(acc_print)
 
-            # Saves the model after pruning
-            saver.save(sess, model_path_pruned + "_{}".format(int(sparsity*100)))
+            if epoch % print_freq == 0:
+                print("Epoch: {}, accuracy: {}".format(epoch, acc_print))
 
-            # Print final accuracy
-            acc_print_final = acc[-1]
-            print("Pre-pruning accuracy: {}, post-pruning accuracy: {}".format(acc_print_pre, acc_print_final))
-            print("Final sparsity by layer, expected: {}, actually: {}"
-                  .format(sparsity, sess.run(tf.contrib.model_pruning.get_weight_sparsity())))
-        return acc
+        # Saves the model after pruning
+        saver.save(sess, model_path_pruned + "_{}".format(int(sparsity*100)))
+
+        # Print final accuracy
+        acc_print_final = acc[-1]
+        print("Pre-pruning accuracy: {}, post-pruning accuracy: {}".format(acc_print_pre, acc_print_final))
+        print("Final sparsity by layer, expected: {}, actually: {}"
+              .format(sparsity, sess.run(tf.contrib.model_pruning.get_weight_sparsity())))
+    return acc
 
 
 if __name__ == "__main__":
     model_sparsities = [.10, .25, .50, .90]  # Target sparsity used for pruning
     train_lr = 1e-4  # Learning rate used for the optimizer
-    epochs = 2500  # Epochs to train before and after pruning
+    epochs = 1000  # Epochs to train before and after pruning
     print_every = 100  # Frequency of prints
     path_unpruned = "models/unpruned.ckpt"  # Path to save the unpruned model
     path_pruned = "models/pruned.ckpt"  # Path to save the pruned model
     saver = tf.train.Saver()
+    data = input_data.read_data_sets('data/fashion', one_hot=True)
+    sess = tf.Session()
 
-    unpruned_acc = main(saver, total_epochs=epochs, print_freq=print_every,
+    unpruned_acc = main(saver, data, sess, total_epochs=epochs, print_freq=print_every,
                        model_path_unpruned=path_unpruned, model_path_pruned=path_pruned,
                        learning_rate=train_lr, train_mode=True)
     plot(unpruned_acc, title='Fashion MNIST Unpruned')
 
     for model_sparsity in model_sparsities:
-        pruned_acc = main(saver, total_epochs=epochs, print_freq=print_every,
+        pruned_acc = main(saver, data, sess, total_epochs=epochs, print_freq=print_every,
                           model_path_unpruned=path_unpruned, model_path_pruned=path_pruned, sparsity=model_sparsity,
                           learning_rate=train_lr)
         plot(pruned_acc, title='Fashion MNIST Pruned (Sparsity: {})'.format(model_sparsity))
